@@ -7,7 +7,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const studentId = params.id
 
     // Get comprehensive student analytics
-    const [progressData, pointsData, streakData, achievementsData] = await Promise.all([
+    const [progressData, pointsData, achievementsData] = await Promise.all([
       // Progress by subject
       supabase
         .from("student_progress")
@@ -29,16 +29,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         `)
         .eq("student_id", studentId),
 
-      // Student points and level
+      // Student points, level and streak from the correct table
       supabase
         .from("student_points")
-        .select("*")
-        .eq("student_id", studentId)
-        .single(),
-
-      // Current streak
-      supabase
-        .from("student_streaks")
         .select("*")
         .eq("student_id", studentId)
         .single(),
@@ -59,7 +52,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         .eq("student_id", studentId),
     ])
 
-    // Calculate analytics
+    // Calculate analytics using the correct data source for the streak
     const analytics = {
       totalLessons: progressData.data?.length || 0,
       completedLessons: progressData.data?.filter((p) => p.status === "completed").length || 0,
@@ -69,7 +62,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       recentActivity: [],
       points: pointsData.data?.total_points || 0,
       level: pointsData.data?.level || 1,
-      currentStreak: streakData.data?.current_streak || 0,
+      currentStreak: pointsData.data?.current_streak || 0,
       achievements: achievementsData.data || [],
     }
 
