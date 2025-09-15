@@ -35,8 +35,7 @@ export default function SignUpPage() {
         email,
         password,
         options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/student/dashboard`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: fullName,
             role: role,
@@ -47,27 +46,26 @@ export default function SignUpPage() {
       })
 
       if (authError) throw authError
+      if (!authData.user) throw new Error("Sign up successful, but no user data returned.")
 
-      if (authData.user) {
-        // Create profile record
-        const { error: profileError } = await supabase.from("profiles").insert({
-          id: authData.user.id,
-          email: email,
-          full_name: fullName,
-          role: role,
-          grade_level: role === "student" ? Number.parseInt(gradeLevel) : null,
-          school_name: schoolName,
-        })
+      // Create profile record
+      const { error: profileError } = await supabase.from("profiles").insert({
+        id: authData.user.id,
+        email: email,
+        full_name: fullName,
+        role: role,
+        grade_level: role === "student" ? Number.parseInt(gradeLevel) : null,
+        school_name: schoolName,
+      })
 
-        if (profileError) {
-          console.error("Profile creation error:", profileError)
-          // Don't throw here as the auth user was created successfully
-        }
+      if (profileError) {
+        // If profile creation fails, throw the error
+        throw profileError
       }
 
       router.push("/auth/sign-up-success")
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
+      setError(error instanceof Error ? error.message : "An error occurred during sign up.")
     } finally {
       setIsLoading(false)
     }
